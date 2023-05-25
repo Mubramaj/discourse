@@ -40,6 +40,7 @@ export default class ChatLivePane extends Component {
   @service("chat-channel-pane") pane;
   @service chatChannelPaneSubscriptionsManager;
   @service chatApi;
+  @service usersApi;
   @service currentUser;
   @service appEvents;
   @service messageBus;
@@ -668,6 +669,10 @@ export default class ChatLivePane extends Component {
       upload_ids: message.uploads.map((upload) => upload.id),
     };
 
+    // We don't want to fail if somethings goes wrong here,
+    // because that would cancel posting a message to the server.
+    // We'd better just show mentions on the message without status on them.
+    await this.#tryToEnsureMentionsLoaded(message);
     this.resetComposerMessage();
 
     try {
@@ -716,6 +721,11 @@ export default class ChatLivePane extends Component {
       );
     }
 
+    // We don't want to fail if somethings goes wrong here,
+    // because that would cancel posting a message to the server.
+    // We'd better just show mentions on the message without status on them.
+    await this.#tryToEnsureMentionsLoaded(message);
+
     await this.args.channel.stageMessage(message);
     this.resetComposerMessage();
 
@@ -730,7 +740,6 @@ export default class ChatLivePane extends Component {
         staged_id: message.id,
         upload_ids: message.uploads.map((upload) => upload.id),
       });
-
       this.scrollToLatestMessage();
     } catch (error) {
       this._onSendError(message.id, error);
@@ -1083,5 +1092,14 @@ export default class ChatLivePane extends Component {
     cancel(this._onScrollEndedHandler);
     cancel(this._laterComputeHandler);
     cancel(this._debounceFetchMessagesHandler);
+  }
+
+  async #tryToEnsureMentionsLoaded(message) {
+    try {
+      await message.ensureMentionsLoaded();
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn("Cannot load mentioned users", e);
+    }
   }
 }
