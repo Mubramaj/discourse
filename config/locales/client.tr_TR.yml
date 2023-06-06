@@ -559,6 +559,8 @@ tr_TR:
           title: "Kullanıcı"
         reviewable_post:
           title: "Gönderi"
+        reviewable_chat_message:
+          title: "Bayraklı sohbet mesajı"
       approval:
         title: "Gönderi Onay Gerektiriyor"
         description: "Yeni gönderinizi aldık fakat görünmeden önce moderatör tarafından onaylanması gerekiyor. Lütfen sabırlı olun."
@@ -1033,6 +1035,7 @@ tr_TR:
           warning: "Öne çıkarılan konunuzu silmek istediğinizden emin misiniz?"
       use_current_timezone: "Mevcut Saat Dilimini Kullan"
       profile_hidden: "Bu kullanıcının genel profili gizli."
+      inactive_user: "Bu kullanıcı artık aktif değil."
       expand_profile: "Genişlet"
       sr_expand_profile: "Profil detaylarını genişlet"
       collapse_profile: "Daralt"
@@ -2967,6 +2970,7 @@ tr_TR:
         instructions:
           one: "Lütfen bu gönderiyi taşımak istediğiniz konuyu seçin."
           other: "Lütfen bu <b>%{count}</b> gönderiyi taşımak istediğiniz konuyu seçin."
+        chronological_order: "birleştirdikten sonra kronolojik sırayı koru"
       move_to_new_message:
         title: "Yeni Mesaja Taşı"
         action: "yeni mesaja taşı"
@@ -3738,7 +3742,9 @@ tr_TR:
         one: "Bu rozeti %{count} kez kazandı"
         other: "Bu rozeti %{count} kez kazandı"
       granted_on: "%{date} tarihinde verildi"
-      others_count: "Bu rozete sahip diğer kişiler (%{count})"
+      others_count:
+        one: "Başkalarına %{count} kez verildi"
+        other: "Başkalarına %{count} kez verildi"
       title: Rozetler
       allow_title: "Bu rozeti başlık olarak kullanabilirsiniz"
       multiple_grant: "Bunu birden çok kez kazanabilirsiniz"
@@ -3979,8 +3985,11 @@ tr_TR:
         custom:
           save: "Kaydet"
           delete: "Sil"
+          reset_confirm: "Bu bölümü varsayılana sıfırlamak istediğinizden emin misiniz?"
           public: "Bu bölümü herkese açık ve herkes tarafından görülebilir hale getir"
+          more_menu: "Daha fazla menü"
           links:
+            reset: "Varsayılana sıfırla"
             icon:
               label: "Simge"
               validation:
@@ -4037,7 +4046,8 @@ tr_TR:
           configure_defaults: "Varsayılanları yapılandır"
         community:
           header_link_text: "Topluluk"
-          header_action_title: "Yeni konu oluşturun"
+          header_action_create_topic_title: "Yeni konu oluşturun"
+          header_action_edit_section_title: "Topluluk bölümünü düzenle"
           links:
             about:
               content: "Hakkında"
@@ -4078,6 +4088,8 @@ tr_TR:
     until: "Şuna kadar:"
     char_counter:
       exceeded: "İzin verilen maksimum karakter sayısı aşıldı."
+    form_template_chooser:
+      select_template: "Form şablonlarını seçin"
   admin_js:
     type_to_filter: "filtrelemek için yazın..."
     admin:
@@ -5494,7 +5506,9 @@ tr_TR:
             label: "Emoji ekle"
         title: "Ayarlar"
         no_results: "Sonuç bulunamadı."
-        more_than_30_results: "30'dan fazla sonuç var. Lütfen aramanızı daraltın veya bir kategori seçin."
+        more_site_setting_results:
+          one: "Birden çok sonuç var. Lütfen aramanızı daraltın veya bir kategori seçin."
+          other: "%{count} adetten çok sonuç var. Lütfen aramanızı daraltın veya bir kategori seçin."
         clear_filter: "Temizle"
         add_url: "URL ekle"
         add_host: "sunucu ekle"

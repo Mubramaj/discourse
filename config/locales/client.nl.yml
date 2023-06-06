@@ -3737,7 +3737,6 @@ nl:
         one: "Deze badge is %{count} keer verdiend"
         other: "Deze badge is %{count} keer verdiend"
       granted_on: "Toegekend op %{date}"
-      others_count: "Anderen met deze badge (%{count})"
       title: Badges
       allow_title: "Je kunt deze badge als een titel gebruiken"
       multiple_grant: "Je kunt dit meerdere keren verdienen"
@@ -3978,6 +3977,7 @@ nl:
           save: "Opslaan"
           delete: "Verwijderen"
           links:
+            reset: "Standaard herstellen"
             icon:
               label: "Pictogram"
             name:
@@ -4019,7 +4019,7 @@ nl:
           configure_defaults: "Standaardinstellingen configureren"
         community:
           header_link_text: "Community"
-          header_action_title: "Maak een topic"
+          header_action_create_topic_title: "Maak een topic"
           links:
             about:
               content: "Over"
@@ -5439,7 +5439,6 @@ nl:
             label: "Emoji toevoegen"
         title: "Instellingen"
         no_results: "Geen resultaten gevonden."
-        more_than_30_results: "Er zijn meer dan 30 resultaten. Verfijn je zoekopdracht of selecteer een categorie."
         clear_filter: "Wissen"
         add_url: "URL toevoegen"
         add_host: "host toevoegen"

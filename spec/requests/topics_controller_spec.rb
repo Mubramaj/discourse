@@ -358,6 +358,29 @@ RSpec.describe TopicsController do
       end
     end
 
+    describe "moving chronologically to an existing topic" do
+      before { sign_in(moderator) }
+
+      fab!(:p1) { Fabricate(:post, user: moderator, created_at: dest_topic.created_at - 1.hour) }
+      fab!(:topic) { p1.topic }
+
+      context "with success" do
+        it "returns success" do
+          post "/t/#{topic.id}/move-posts.json",
+               params: {
+                 post_ids: [p1.id],
+                 destination_topic_id: dest_topic.id,
+                 chronological_order: "true",
+               }
+
+          expect(response.status).to eq(200)
+          result = response.parsed_body
+          expect(result["success"]).to eq(true)
+          expect(result["url"]).to be_present
+        end
+      end
+    end
+
     describe "moving to an existing topic as a group moderator" do
       fab!(:category) { Fabricate(:category, reviewable_by_group: group_user.group) }
       fab!(:topic) { Fabricate(:topic, category: category) }
@@ -406,6 +429,40 @@ RSpec.describe TopicsController do
              }
 
         expect(response).to be_forbidden
+      end
+    end
+
+    describe "moving chronologically to an existing topic as a group moderator" do
+      fab!(:category) { Fabricate(:category, reviewable_by_group: group_user.group) }
+      fab!(:topic) { Fabricate(:topic, category: category) }
+      fab!(:p1) do
+        Fabricate(
+          :post,
+          user: group_user.user,
+          topic: topic,
+          created_at: dest_topic.created_at - 1.hour,
+        )
+      end
+
+      let!(:user) { group_user.user }
+
+      before do
+        sign_in(user)
+        SiteSetting.enable_category_group_moderation = true
+      end
+
+      it "moves the posts" do
+        post "/t/#{topic.id}/move-posts.json",
+             params: {
+               post_ids: [p1.id],
+               destination_topic_id: dest_topic.id,
+               chronological_order: "true",
+             }
+
+        expect(response.status).to eq(200)
+        result = response.parsed_body
+        expect(result["success"]).to eq(true)
+        expect(result["url"]).to be_present
       end
     end
 
@@ -551,6 +608,48 @@ RSpec.describe TopicsController do
         end
       end
     end
+
+    describe "moving chronologically to an existing message" do
+      before { sign_in(admin) }
+
+      fab!(:evil_trout) { Fabricate(:evil_trout) }
+      fab!(:message) { pm }
+
+      fab!(:dest_message) do
+        Fabricate(
+          :private_message_topic,
+          user: trust_level_4,
+          topic_allowed_users: [Fabricate.build(:topic_allowed_user, user: evil_trout)],
+        )
+      end
+
+      fab!(:p2) do
+        Fabricate(
+          :post,
+          user: evil_trout,
+          post_number: 2,
+          topic: message,
+          created_at: dest_message.created_at - 1.hour,
+        )
+      end
+
+      context "with success" do
+        it "returns success" do
+          post "/t/#{message.id}/move-posts.json",
+               params: {
+                 post_ids: [p2.id],
+                 destination_topic_id: dest_message.id,
+                 archetype: "private_message",
+                 chronological_order: "true",
+               }
+
+          expect(response.status).to eq(200)
+          result = response.parsed_body
+          expect(result["success"]).to eq(true)
+          expect(result["url"]).to be_present
+        end
+      end
+    end
   end
 
   describe "#merge_topic" do
@@ -579,6 +678,27 @@ RSpec.describe TopicsController do
         it "returns success" do
           sign_in(moderator)
           post "/t/#{topic.id}/merge-topic.json", params: { destination_topic_id: dest_topic.id }
+
+          expect(response.status).to eq(200)
+          result = response.parsed_body
+          expect(result["success"]).to eq(true)
+          expect(result["url"]).to be_present
+        end
+      end
+    end
+
+    describe "merging chronologically into another topic" do
+      fab!(:p1) { Fabricate(:post, user: user, created_at: dest_topic.created_at - 1.hour) }
+      fab!(:topic) { p1.topic }
+
+      context "when moving all the posts to the destination topic" do
+        it "returns success" do
+          sign_in(moderator)
+          post "/t/#{topic.id}/merge-topic.json",
+               params: {
+                 destination_topic_id: dest_topic.id,
+                 chronological_order: "true",
+               }
 
           expect(response.status).to eq(200)
           result = response.parsed_body
@@ -625,6 +745,47 @@ RSpec.describe TopicsController do
       end
     end
 
+    describe "merging chronologically into another topic as a group moderator" do
+      fab!(:category) { Fabricate(:category, reviewable_by_group: group_user.group) }
+      fab!(:topic) { Fabricate(:topic, category: category) }
+      fab!(:p1) do
+        Fabricate(
+          :post,
+          user: post_author1,
+          post_number: 1,
+          topic: topic,
+          created_at: dest_topic.created_at - 1.hour,
+        )
+      end
+      fab!(:p2) do
+        Fabricate(
+          :post,
+          user: post_author2,
+          post_number: 2,
+          topic: topic,
+          created_at: dest_topic.created_at - 30.minutes,
+        )
+      end
+
+      before do
+        sign_in(group_user.user)
+        SiteSetting.enable_category_group_moderation = true
+      end
+
+      it "moves the posts" do
+        post "/t/#{topic.id}/merge-topic.json",
+             params: {
+               destination_topic_id: dest_topic.id,
+               chronological_order: "true",
+             }
+
+        expect(response.status).to eq(200)
+        result = response.parsed_body
+        expect(result["success"]).to eq(true)
+        expect(result["url"]).to be_present
+      end
+    end
+
     describe "merging into another message" do
       fab!(:message) { Fabricate(:private_message_topic, user: user) }
       fab!(:p1) { Fabricate(:post, topic: message, user: trust_level_4) }
@@ -663,6 +824,53 @@ RSpec.describe TopicsController do
                params: {
                  destination_topic_id: dest_message.id,
                  archetype: "private_message",
+               }
+
+          expect(response.status).to eq(200)
+          result = response.parsed_body
+          expect(result["success"]).to eq(true)
+          expect(result["url"]).to be_present
+        end
+      end
+    end
+
+    describe "merging chronologically into another message" do
+      fab!(:message) { Fabricate(:private_message_topic, user: user) }
+
+      fab!(:dest_message) do
+        Fabricate(
+          :private_message_topic,
+          user: trust_level_4,
+          topic_allowed_users: [Fabricate.build(:topic_allowed_user, user: moderator)],
+        )
+      end
+
+      fab!(:p1) do
+        Fabricate(
+          :post,
+          topic: message,
+          user: trust_level_4,
+          created_at: dest_message.created_at - 1.hour,
+        )
+      end
+      fab!(:p2) do
+        Fabricate(
+          :post,
+          topic: message,
+          reply_to_post_number: p1.post_number,
+          user: user,
+          created_at: dest_message.created_at - 30.minutes,
+        )
+      end
+
+      context "when moving all the posts to the destination message" do
+        it "returns success" do
+          sign_in(moderator)
+          post "/t/#{message.id}/merge-topic.json",
+               params: {
+                 destination_topic_id: dest_message.id,
+                 archetype: "private_message",
+                 chronological_order: "true",
                }
 
           expect(response.status).to eq(200)
@@ -4839,6 +5047,78 @@ RSpec.describe TopicsController do
       body = response.parsed_body
 
       expect(body["group_name"]).to eq(group.name)
+    end
+  end
+
+  describe "#set_notifications" do
+    describe "initiated by admin" do
+      it "can update another user's notification level via API" do
+        api_key = Fabricate(:api_key, user: admin)
+        post "/t/#{topic.id}/notifications",
+             params: {
+               username: user.username,
+               notification_level: NotificationLevels.topic_levels[:watching],
+             },
+             headers: {
+               HTTP_API_KEY: api_key.key,
+               HTTP_API_USERNAME: admin.username,
+             }
+        expect(TopicUser.find_by(user: user, topic: topic).notification_level).to eq(
+          NotificationLevels.topic_levels[:watching],
+        )
+      end
+
+      it "can update own notification level via API" do
+        api_key = Fabricate(:api_key, user: admin)
+        post "/t/#{topic.id}/notifications",
+             params: {
+               notification_level: NotificationLevels.topic_levels[:watching],
+             },
+             headers: {
+               HTTP_API_KEY: api_key.key,
+               HTTP_API_USERNAME: admin.username,
+             }
+        expect(TopicUser.find_by(user: admin, topic: topic).notification_level).to eq(
+          NotificationLevels.topic_levels[:watching],
+        )
+      end
+    end
+
+    describe "initiated by non-admin" do
+      it "only acts on current_user and ignores `username` param" do
+        sign_in(user)
+        TopicUser.create!(
+          user: user,
+          topic: topic,
+          notification_level: NotificationLevels.topic_levels[:tracking],
+        )
+        post "/t/#{topic.id}/notifications.json",
+             params: {
+               username: user_2.username,
+               notification_level: NotificationLevels.topic_levels[:watching],
+             }
+
+        expect(TopicUser.find_by(user: user, topic: topic).notification_level).to eq(
+          NotificationLevels.topic_levels[:watching],
+        )
+        expect(TopicUser.find_by(user: user_2, topic: topic)).to be_blank
+      end
+
+      it "can update own notification level via API" do
+        api_key = Fabricate(:api_key, user: user)
+        post "/t/#{topic.id}/notifications",
+             params: {
+               notification_level: NotificationLevels.topic_levels[:watching],
+             },
+             headers: {
+               HTTP_API_KEY: api_key.key,
+               HTTP_API_USERNAME: user.username,
+             }
+
+        expect(TopicUser.find_by(user: user, topic: topic).notification_level).to eq(
+          NotificationLevels.topic_levels[:watching],
+        )
+      end
     end
   end
 end

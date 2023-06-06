@@ -158,6 +158,14 @@ export default class ComposerController extends Controller {
     return this.set("_disableSubmit", value);
   }
 
+  get formTemplateIds() {
+    if (!this.siteSettings.experimental_form_templates) {
+      return null;
+    }
+
+    return this.model.category?.get("form_template_ids");
+  }
+
   @discourseComputed("showPreview")
   toggleText(showPreview) {
     return showPreview
@@ -397,9 +405,13 @@ export default class ComposerController extends Controller {
     }
   }
 
-  @discourseComputed("model.creatingPrivateMessage", "model.targetRecipients")
-  showWarning(creatingPrivateMessage, usernames) {
-    if (!this.get("currentUser.staff")) {
+  @discourseComputed(
+    "model.creatingPrivateMessage",
+    "model.targetRecipients",
+    "model.warningsDisabled"
+  )
+  showWarning(creatingPrivateMessage, usernames, warningsDisabled) {
+    if (!this.get("currentUser.staff") || warningsDisabled) {
       return false;
     }
 
@@ -492,6 +504,11 @@ export default class ComposerController extends Controller {
         this.model.appendText(insertText, null, { new_line: true });
       }
     });
+  }
+
+  @action
+  updateCategory(categoryId) {
+    this.model.categoryId = categoryId;
   }
 
   @action
@@ -1335,6 +1352,7 @@ export default class ComposerController extends Controller {
       composeState: Composer.OPEN,
       isWarning: false,
       hasTargetGroups: opts.hasGroups,
+      warningsDisabled: opts.warningsDisabled,
     });
 
     if (!this.model.targetRecipients) {

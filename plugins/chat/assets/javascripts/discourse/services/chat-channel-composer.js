@@ -1,11 +1,23 @@
 import { inject as service } from "@ember/service";
 import { action } from "@ember/object";
 import ChatComposer from "./chat-composer";
+import ChatMessage from "discourse/plugins/chat/discourse/models/chat-message";
 
 export default class ChatChannelComposer extends ChatComposer {
   @service chat;
-  @service chatChannelThreadComposer;
   @service router;
+
+  @action
+  cancelEditing() {
+    this.reset(this.message.channel);
+  }
+
+  @action
+  reset(channel) {
+    this.message = ChatMessage.createDraftMessage(channel, {
+      user: this.currentUser,
+    });
+  }
 
   @action
   replyTo(message) {
@@ -24,7 +36,7 @@ export default class ChatChannelComposer extends ChatComposer {
         message.thread = thread;
       }
 
-      this.chat.activeMessage = null;
+      this.reset(channel);
       this.router.transitionTo("chat.channel.thread", ...thread.routeModels);
     } else {
       this.message.inReplyTo = message;

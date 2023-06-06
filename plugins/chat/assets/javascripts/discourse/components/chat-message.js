@@ -12,6 +12,7 @@ import { getOwner } from "discourse-common/lib/get-owner";
 import ChatMessageInteractor from "discourse/plugins/chat/discourse/lib/chat-message-interactor";
 import discourseDebounce from "discourse-common/lib/debounce";
 import { bind } from "discourse-common/utils/decorators";
+import { updateUserStatusOnMention } from "discourse/lib/update-user-status-on-mention";
 
 let _chatMessageDecorators = [];
 
@@ -42,6 +43,11 @@ export default class ChatMessage extends Component {
   @service router;
 
   @optionalService adminTools;
+
+  constructor() {
+    super(...arguments);
+    this.initMentionedUsers();
+  }
 
   get pane() {
     return this.args.context === MESSAGE_CONTEXT_THREAD
@@ -104,7 +110,7 @@ export default class ChatMessage extends Component {
     };
 
     this.args.message.expanded = true;
-
+    this.refreshStatusOnMentions();
     recursiveExpand(this.args.message);
   }
 
@@ -120,6 +126,27 @@ export default class ChatMessage extends Component {
   @action
   teardownChatMessage() {
     cancel(this._invitationSentTimer);
+    this.#teardownMentionedUsers();
+  }
+
+  @action
+  refreshStatusOnMentions() {
+    schedule("afterRender", () => {
+      if (!this.messageContainer) {
+        return;
+      }
+
+      this.args.message.mentionedUsers.forEach((user) => {
+        const href = `/u/${user.username.toLowerCase()}`;
+        const mentions = this.messageContainer.querySelectorAll(
+          `a.mention[href="${href}"]`
+        );
+
+        mentions.forEach((mention) => {
+          updateUserStatusOnMention(mention, user.status, this.currentUser);
+        });
+      });
+    });
   }
 
   @action
@@ -130,8 +157,20 @@ export default class ChatMessage extends Component {
       }
 
       _chatMessageDecorators.forEach((decorator) => {
-        decorator.call(this, this.messageContainer, this.args.channel);
+        decorator.call(this, this.messageContainer, this.args.message.channel);
       });
+    });
+  }
+
+  @action
+  initMentionedUsers() {
+    this.args.message.mentionedUsers.forEach((user) => {
+      if (user.isTrackingStatus()) {
+        return;
+      }
+
+      user.trackStatus();
+      user.on("status-changed", this, "refreshStatusOnMentions");
     });
   }
 
@@ -147,7 +186,7 @@ export default class ChatMessage extends Component {
       !this.args.message?.deletedAt ||
       this.currentUser.id === this.args.message?.user?.id ||
       this.currentUser.staff ||
-      this.args.channel?.canModerate
+      this.args.message?.channel?.canModerate
     );
   }
 
@@ -235,6 +274,7 @@ export default class ChatMessage extends Component {
       this._handleLongPress();
     }
 
+    this._touchStartAt = Date.now();
     this._isPressingHandler = discourseLater(this._handleLongPress, 500);
   }
 
@@ -248,6 +288,11 @@ export default class ChatMessage extends Component {
   @action
   handleTouchEnd(event) {
     event.stopPropagation();
+
+    // this is to prevent the long press to register as a click
+    if (Date.now() - this._touchStartAt >= 500) {
+      event.preventDefault();
+    }
 
     cancel(this._isPressingHandler);
   }
@@ -316,7 +361,10 @@ export default class ChatMessage extends Component {
   }
 
   get threadingEnabled() {
-    return this.args.channel?.threadingEnabled && !!this.args.message?.thread;
+    return (
+      this.args.message?.channel?.threadingEnabled &&
+      !!this.args.message?.thread
+    );
   }
 
   get showThreadIndicator() {
@@ -402,5 +450,12 @@ export default class ChatMessage extends Component {
   @action
   dismissMentionWarning() {
     this.args.message.mentionWarning = null;
+  }
+
+  #teardownMentionedUsers() {
+    this.args.message.mentionedUsers.forEach((user) => {
+      user.stopTrackingStatus();
+      user.off("status-changed", this, "refreshStatusOnMentions");
+    });
   }
 }

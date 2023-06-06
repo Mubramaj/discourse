@@ -45,6 +45,21 @@ export default class ChatMessageActionsDesktop extends Component {
   }
 
   @action
+  onMouseleave(event) {
+    // if the mouse is leaving the actions menu for the actual menu, don't close it
+    // this will avoid the menu rerendering
+    if (
+      (event.toElement || event.relatedTarget)?.closest(
+        ".chat-message-container"
+      )
+    ) {
+      return;
+    }
+
+    this.chat.activeMessage = null;
+  }
+
+  @action
   setup(element) {
     this.popper?.destroy();
 
@@ -53,6 +68,10 @@ export default class ChatMessageActionsDesktop extends Component {
         this.message.id,
         this.context
       );
+
+      if (!messageContainer) {
+        return;
+      }
 
       const viewport = messageContainer.closest(".popper-viewport");
       this.size =

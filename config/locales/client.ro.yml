@@ -2785,7 +2785,6 @@ ro:
         few: "A primit acest ecuson de %{count} ori"
         other: "A primit acest ecuson de %{count} de ori"
       granted_on: "Acordat %{date}"
-      others_count: "Alții cu acest ecuson (%{count})"
       title: Ecusoane
       multiple_grant: "Poți primi asta de mai multe ori"
       badge_count:
@@ -2926,6 +2925,7 @@ ro:
           save: "Salvare"
           delete: "Șterge"
           links:
+            reset: "Resetare la valorile implicite"
             icon:
               label: "Pictogramă"
             name:

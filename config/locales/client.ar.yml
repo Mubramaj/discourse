@@ -4469,7 +4469,6 @@ ar:
         many: "تم منحك هذه الشارة %{count} مرة"
         other: "تم منحك هذه الشارة %{count} مرة"
       granted_on: "تم منحه بتاريخ %{date}"
-      others_count: "الآخرون الذين تم منحهم هذه الشارة (%{count})"
       title: الشارات
       allow_title: "يمكنك استخدام هذة الشارة كلقب"
       multiple_grant: "يمكن أن يتم منحك هذه الشارة أكثر من مرة"
@@ -4766,6 +4765,7 @@ ar:
           save: "حفظ"
           delete: "حذف"
           links:
+            reset: "إعادة الضبط إلى الإعداد الافتراضي"
             icon:
               label: "الأيقونة"
             name:
@@ -4807,7 +4807,7 @@ ar:
           configure_defaults: "تكوين الإعدادات الافتراضية"
         community:
           header_link_text: "المجتمع"
-          header_action_title: "إنشاء موضوع"
+          header_action_create_topic_title: "إنشاء موضوع"
           links:
             about:
               content: "نبذة"
@@ -6276,7 +6276,6 @@ ar:
             label: "إضافة رمز تعبيري"
         title: "الإعدادات"
         no_results: "لم يتم العثور على نتائج."
-        more_than_30_results: "هناك أكثر من 30 نتيجة. يُرجى تحسين البحث أو تحديد فئة."
         clear_filter: "مسح"
         add_url: "إضافة عنوان URL"
         add_host: "إضافة مضيف"

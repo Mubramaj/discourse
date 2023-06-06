@@ -803,8 +803,16 @@ class TopicsController < ApplicationController
   end
 
   def set_notifications
+    user =
+      if is_api? && @guardian.is_admin? &&
+           (params[:username].present? || params[:external_id].present?)
+        fetch_user_from_params
+      else
+        current_user
+      end
+
     topic = Topic.find(params[:topic_id].to_i)
-    TopicUser.change(current_user, topic.id, notification_level: params[:notification_level].to_i)
+    TopicUser.change(user, topic.id, notification_level: params[:notification_level].to_i)
     render json: success_json
   end
 
@@ -812,6 +820,7 @@ class TopicsController < ApplicationController
     topic_id = params.require(:topic_id)
     destination_topic_id = params.require(:destination_topic_id)
     params.permit(:participants)
+    params.permit(:chronological_order)
     params.permit(:archetype)
 
     raise Discourse::InvalidAccess if params[:archetype] == "private_message" && !guardian.is_staff?
@@ -824,6 +833,7 @@ class TopicsController < ApplicationController
 
     args = {}
     args[:destination_topic_id] = destination_topic_id.to_i
+    args[:chronological_order] = params[:chronological_order] == "true"
 
     if params[:archetype].present?
       args[:archetype] = params[:archetype]
@@ -841,6 +851,7 @@ class TopicsController < ApplicationController
     params.permit(:category_id)
     params.permit(:tags)
     params.permit(:participants)
+    params.permit(:chronological_order)
     params.permit(:archetype)
 
     raise Discourse::InvalidAccess if params[:archetype] == "private_message" && !guardian.is_staff?
@@ -1265,6 +1276,7 @@ class TopicsController < ApplicationController
       :destination_topic_id
     ].present?
     args[:tags] = params[:tags] if params[:tags].present?
+    args[:chronological_order] = params[:chronological_order] == "true"
 
     if params[:archetype].present?
       args[:archetype] = params[:archetype]

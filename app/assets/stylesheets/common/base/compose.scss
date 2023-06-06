@@ -120,11 +120,9 @@ html.composer-open {
       width: auto;
       max-width: 100%;
 
-      .avatar {
-        width: 20px;
-      }
-
       .action-title {
+        display: flex;
+        align-items: center;
         line-height: normal;
         @include ellipsis;
       }
@@ -393,6 +391,17 @@ html.composer-open {
 
   #file-uploader {
     display: none;
+  }
+
+  .composer-select-form-template {
+    margin-bottom: 8px;
+    width: 100%;
+
+    .name,
+    .formatted-selection,
+    .d-icon {
+      color: var(--primary-high);
+    }
   }
 }
 

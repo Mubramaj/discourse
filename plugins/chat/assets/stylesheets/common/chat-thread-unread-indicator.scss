@@ -1,0 +1,22 @@
+@mixin chat-thread-unread-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  min-width: 14px;
+  padding: 3px;
+  font-size: 0.8rem;
+  border-radius: 1em;
+  background: var(--tertiary-med-or-tertiary);
+
+  &__number {
+    font-weight: bold;
+    color: var(--secondary);
+    line-height: 1;
+  }
+}
+
+.chat-thread-header-unread-indicator,
+.chat-thread-list-item-unread-indicator {
+  @include chat-thread-unread-indicator;
+}

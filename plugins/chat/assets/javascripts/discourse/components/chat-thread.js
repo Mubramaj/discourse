@@ -6,11 +6,12 @@ import ChatMessage from "discourse/plugins/chat/discourse/models/chat-message";
 import { popupAjaxError } from "discourse/lib/ajax-error";
 import { bind, debounce } from "discourse-common/utils/decorators";
 import { inject as service } from "@ember/service";
-import { schedule } from "@ember/runloop";
+import { cancel, next, schedule } from "@ember/runloop";
 import discourseLater from "discourse-common/lib/later";
 import { resetIdle } from "discourse/lib/desktop-notifications";
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 100;
+const READ_INTERVAL_MS = 1000;
 
 export default class ChatThreadPanel extends Component {
   @service siteSettings;
@@ -39,6 +40,13 @@ export default class ChatThreadPanel extends Component {
   }
 
   @action
+  didUpdateThread() {
+    this.subscribeToUpdates();
+    this.loadMessages();
+    this.resetComposer();
+  }
+
+  @action
   setUploadDropZone(element) {
     this.uploadDropZone = element;
   }
@@ -53,6 +61,66 @@ export default class ChatThreadPanel extends Component {
     this.chatChannelThreadPaneSubscriptionsManager.unsubscribe();
   }
 
+  // TODO (martin) This needs to have the extended scroll/message visibility/
+  // mark read behaviour the same as the channel.
+  @action
+  computeScrollState() {
+    cancel(this.onScrollEndedHandler);
+
+    if (!this.scrollable) {
+      return;
+    }
+
+    this.resetActiveMessage();
+
+    if (this.#isAtBottom()) {
+      this.updateLastReadMessage();
+      this.onScrollEnded();
+    } else {
+      this.isScrolling = true;
+      this.onScrollEndedHandler = discourseLater(this, this.onScrollEnded, 150);
+    }
+  }
+
+  #isAtBottom() {
+    if (!this.scrollable) {
+      return false;
+    }
+
+    // This is different from the channel scrolling because the scrolling here
+    // is inverted -- in the channel's case scrollTop is 0 when scrolled to the
+    // bottom of the channel, but in the negatives when scrolling up to past messages.
+    //
+    // c.f. https://developer.mozilla.org/en-US/docs/Web/API/Element/scrollHeight#determine_if_an_element_has_been_totally_scrolled
+    return (
+      Math.abs(
+        this.scrollable.scrollHeight -
+          this.scrollable.clientHeight -
+          this.scrollable.scrollTop
+      ) <= 2
+    );
+  }
+
+  @bind
+  onScrollEnded() {
+    this.isScrolling = false;
+  }
+
+  @debounce(READ_INTERVAL_MS)
+  updateLastReadMessage() {
+    schedule("afterRender", () => {
+      if (this._selfDeleted) {
+        return;
+      }
+
+      // TODO (martin) HACK: We don't have proper scroll visibility over
+      // what message we are looking at, don't have the lastReadMessageId
+      // for the thread, and this updateLastReadMessage function is only
+      // called when scrolling all the way to the bottom.
+      this.markThreadAsRead();
+    });
+  }
+
   @action
   setScrollable(element) {
     this.scrollable = element;
@@ -60,13 +128,6 @@ export default class ChatThreadPanel extends Component {
 
   @action
   loadMessages() {
-    const message = ChatMessage.createDraftMessage(this.channel, {
-      user: this.currentUser,
-    });
-    message.thread = this.thread;
-    message.inReplyTo = this.thread.originalMessage;
-    this.chatChannelThreadComposer.message = message;
-
     this.thread.messagesManager.clearMessages();
     this.fetchMessages();
   }
@@ -93,22 +154,22 @@ export default class ChatThreadPanel extends Component {
 
     this.loading = true;
 
-    const findArgs = { pageSize: PAGE_SIZE, threadId: this.thread.id };
+    const findArgs = {
+      pageSize: PAGE_SIZE,
+      threadId: this.thread.id,
+      includeMessages: true,
+    };
     return this.chatApi
-      .messages(this.channel.id, findArgs)
-      .then((results) => {
-        if (this._selfDeleted || this.channel.id !== results.meta.channel_id) {
-          this.router.transitionTo(
-            "chat.channel",
-            "-",
-            results.meta.channel_id
-          );
+      .channel(this.channel.id, findArgs)
+      .then((result) => {
+        if (this._selfDeleted || this.channel.id !== result.meta.channel_id) {
+          this.router.transitionTo("chat.channel", "-", result.meta.channel_id);
         }
 
         const [messages, meta] = this.afterFetchCallback(
           this.channel,
           this.thread,
-          results
+          result
         );
         this.thread.messagesManager.addMessages(messages);
         this.thread.details = meta;
@@ -125,10 +186,10 @@ export default class ChatThreadPanel extends Component {
   }
 
   @bind
-  afterFetchCallback(channel, thread, results) {
+  afterFetchCallback(channel, thread, result) {
     const messages = [];
 
-    results.chat_messages.forEach((messageData) => {
+    result.chat_messages.forEach((messageData) => {
       // If a message has been hidden it is because the current user is ignoring
       // the user who sent it, so we want to unconditionally hide it, even if
       // we are going directly to the target
@@ -144,7 +205,7 @@ export default class ChatThreadPanel extends Component {
       messages.push(message);
     });
 
-    return [messages, results.meta];
+    return [messages, result.meta];
   }
 
   // NOTE: At some point we want to do this based on visible messages
@@ -155,13 +216,13 @@ export default class ChatThreadPanel extends Component {
   }
 
   @action
-  onSendMessage(message) {
+  async onSendMessage(message) {
     resetIdle();
 
     if (message.editing) {
-      this.#sendEditMessage(message);
+      await this.#sendEditMessage(message);
     } else {
-      this.#sendNewMessage(message);
+      await this.#sendNewMessage(message);
     }
   }
 
@@ -175,7 +236,7 @@ export default class ChatThreadPanel extends Component {
     this.chat.activeMessage = null;
   }
 
-  #sendNewMessage(message) {
+  async #sendNewMessage(message) {
     message.thread = this.thread;
 
     if (this.chatChannelThreadPane.sending) {
@@ -184,24 +245,24 @@ export default class ChatThreadPanel extends Component {
 
     this.chatChannelThreadPane.sending = true;
 
-    this.thread.stageMessage(message);
-    const stagedMessage = message;
+    await this.thread.stageMessage(message);
     this.resetComposer();
-    this.thread.messagesManager.addMessages([stagedMessage]);
 
     this.scrollToBottom();
 
     return this.chatApi
       .sendMessage(this.channel.id, {
-        message: stagedMessage.message,
-        in_reply_to_id: stagedMessage.inReplyTo?.id,
-        staged_id: stagedMessage.id,
-        upload_ids: stagedMessage.uploads.map((upload) => upload.id),
-        thread_id: this.thread.staged ? null : stagedMessage.thread.id,
-        staged_thread_id: this.thread.staged ? stagedMessage.thread.id : null,
+        message: message.message,
+        in_reply_to_id: message.thread.staged
+          ? message.thread.originalMessage.id
+          : null,
+        staged_id: message.id,
+        upload_ids: message.uploads.map((upload) => upload.id),
+        thread_id: message.thread.staged ? null : message.thread.id,
+        staged_thread_id: message.thread.staged ? message.thread.id : null,
       })
       .catch((error) => {
-        this.#onSendError(stagedMessage.id, error);
+        this.#onSendError(message.id, error);
       })
       .finally(() => {
         if (this._selfDeleted) {
@@ -211,8 +272,8 @@ export default class ChatThreadPanel extends Component {
       });
   }
 
-  #sendEditMessage(message) {
-    message.cook();
+  async #sendEditMessage(message) {
+    await message.cook();
     this.chatChannelThreadPane.sending = true;
 
     const data = {
@@ -222,12 +283,17 @@ export default class ChatThreadPanel extends Component {
 
     this.resetComposer();
 
-    return this.chatApi
-      .editMessage(message.channel.id, message.id, data)
-      .catch(popupAjaxError)
-      .finally(() => {
-        this.chatChannelThreadPane.sending = false;
-      });
+    try {
+      return await this.chatApi.editMessage(
+        message.channel.id,
+        message.id,
+        data
+      );
+    } catch (e) {
+      popupAjaxError(e);
+    } finally {
+      this.chatChannelThreadPane.sending = false;
+    }
   }
 
   // A more consistent way to scroll to the bottom when we are sure this is our goal
@@ -235,13 +301,17 @@ export default class ChatThreadPanel extends Component {
   // to the bottom
   @action
   scrollToBottom() {
-    if (!this.scrollable) {
-      return;
-    }
+    next(() => {
+      schedule("afterRender", () => {
+        if (!this.scrollable) {
+          return;
+        }
 
-    this.scrollable.scrollTop = this.scrollable.scrollHeight + 1;
-    this.forceRendering(() => {
-      this.scrollable.scrollTop = this.scrollable.scrollHeight;
+        this.scrollable.scrollTop = this.scrollable.scrollHeight + 1;
+        this.forceRendering(() => {
+          this.scrollable.scrollTop = this.scrollable.scrollHeight;
+        });
+      });
     });
   }
 
