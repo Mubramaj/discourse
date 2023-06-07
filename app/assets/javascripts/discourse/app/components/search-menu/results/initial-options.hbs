@@ -14,10 +14,8 @@
           @suffix={{i18n "search.in_topics_posts"}}
           @closeSearchMenu={{@closeSearchMenu}}
           @extraHint={{true}}
-          @closeSearchMenu={{@closeSearchMenu}}
           @searchTermChanged={{@searchTermChanged}}
           @suggestionKeyword={{this.contextTypeKeyword}}
-          {{!-- @setTopicContext={{@setTopicContext}} --}}
         />
       {{/if}}
 
@@ -33,7 +31,6 @@
           @searchTermChanged={{@searchTermChanged}}
           @setTopicContext={{@setTopicContext}}
         />
-        {{log @setTopicContext}}
       {{/if}}
     {{else}}
       <SearchMenu::Results::RandomQuickTip

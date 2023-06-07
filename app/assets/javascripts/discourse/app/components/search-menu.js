@@ -44,7 +44,6 @@ export default class SearchMenu extends Component {
   _activeSearch = null;
 
   get includesTopics() {
-    console.log(this.typeFilter);
     return this.typeFilter !== DEFAULT_TYPE_FILTER;
   }
 
@@ -152,9 +151,7 @@ export default class SearchMenu extends Component {
   perform() {
     this.cancel();
 
-    const fullSearchUrl = this.fullSearchUrl();
     const matchSuggestions = this.matchesSuggestions();
-
     if (matchSuggestions) {
       this.noResults = true;
       this.results = {};
