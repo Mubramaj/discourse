@@ -66,11 +66,18 @@ export default class AssistantItem extends Component {
 
   @action
   onClick(e) {
+    if (this.search.searchContext.type === "topic") {
+      this.args.setTopicContext();
+    }
+
     let updatedValue = this.prefix;
     if (this.args.slug) {
       updatedValue = updatedValue.concat(this.args.slug);
     }
-    this.args.searchTermChanged(updatedValue, { searchTopics: true });
+
+    this.args.searchTermChanged(updatedValue, {
+      searchTopics: this.search.searchContext.type !== "topic",
+    });
     e.preventDefault();
     return false;
   }

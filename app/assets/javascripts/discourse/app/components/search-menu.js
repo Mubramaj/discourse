@@ -44,6 +44,7 @@ export default class SearchMenu extends Component {
   _activeSearch = null;
 
   get includesTopics() {
+    console.log(this.typeFilter);
     return this.typeFilter !== DEFAULT_TYPE_FILTER;
   }
 

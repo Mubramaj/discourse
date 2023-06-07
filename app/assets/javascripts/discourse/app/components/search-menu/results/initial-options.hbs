@@ -17,6 +17,7 @@
           @closeSearchMenu={{@closeSearchMenu}}
           @searchTermChanged={{@searchTermChanged}}
           @suggestionKeyword={{this.contextTypeKeyword}}
+          {{!-- @setTopicContext={{@setTopicContext}} --}}
         />
       {{/if}}
 
@@ -30,7 +31,9 @@
           @label={{this.label}}
           @closeSearchMenu={{@closeSearchMenu}}
           @searchTermChanged={{@searchTermChanged}}
+          @setTopicContext={{@setTopicContext}}
         />
+        {{log @setTopicContext}}
       {{/if}}
     {{else}}
       <SearchMenu::Results::RandomQuickTip
