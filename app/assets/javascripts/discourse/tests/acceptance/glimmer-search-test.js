@@ -989,15 +989,28 @@ acceptance("Search - Glimmer - assistant", function (needs) {
     await click("#search-button");
 
     const firstTarget =
-      ".search-menu .results ul.search-menu-assistant .search-link .search-item-slug";
+      ".search-menu .results ul.search-menu-assistant .search-link ";
 
     await fillIn("#search-term", "in:");
     await triggerKeyEvent("#search-term", "keydown", 51);
-    assert.strictEqual(query(firstTarget).innerText, "in:title");
+    assert.strictEqual(
+      query(firstTarget.concat(".search-item-slug")).innerText,
+      "in:title",
+      "keyword is present in suggestion"
+    );
 
     await fillIn("#search-term", "sam in:");
     await triggerKeyEvent("#search-term", "keydown", 51);
-    assert.strictEqual(query(firstTarget).innerText, "sam in:title");
+    assert.strictEqual(
+      query(firstTarget.concat(".search-item-prefix")).innerText,
+      "sam",
+      "term is present in suggestion"
+    );
+    assert.strictEqual(
+      query(firstTarget.concat(".search-item-slug")).innerText,
+      "in:title",
+      "keyword is present in suggestion"
+    );
 
     await fillIn("#search-term", "in:mess");
     await triggerKeyEvent("#search-term", "keydown", 51);
